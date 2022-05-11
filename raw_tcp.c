@@ -1,15 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h> //memset
+#include <string.h>
 #include <sys/time.h>
 #include <netinet/ip.h>
-// #include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
-
-#include <sys/socket.h>	//for socket ofcourse
-#include <arpa/inet.h> // inet_addr
-
+#include <sys/socket.h>	
+#include <arpa/inet.h>
 
 typedef unsigned char u8;
 typedef unsigned short int u16;
@@ -17,11 +14,7 @@ typedef unsigned short int u16;
 unsigned short in_cksum(unsigned short *ptr, int nbytes);
 void help(const char *p);
 
-
-
-/* 
-	96 bit (12 bytes) pseudo header needed for tcp header checksum calculation 
-*/
+/* 96 bit (12 bytes) pseudo header needed for tcp header checksum calculation */
 struct pseudo_header
 {
 	u_int32_t source_address;
@@ -31,9 +24,7 @@ struct pseudo_header
 	u_int16_t tcp_length;
 };
 
-/*
-	Generic checksum calculation function
-*/
+/* Generic checksum calculation function */
 unsigned short csum(unsigned short *ptr,int nbytes) 
 {
 	register long sum;
@@ -57,9 +48,6 @@ unsigned short csum(unsigned short *ptr,int nbytes)
 	
 	return(answer);
 }
-// end of https://www.binarytides.com/raw-sockets-c-code-linux/
-
-
 
 int main(int argc, char **argv)
 {
@@ -137,29 +125,6 @@ int main(int argc, char **argv)
 	// ip->check = in_cksum ((u16 *) ip, sizeof (struct iphdr));
 	ip->check = csum ((unsigned short *) packet, ip->tot_len);
 	
-
-	// ICMP Header
-	//struct icmphdr *icmp = (struct icmphdr *) (packet + sizeof (struct iphdr));
-
-  	//icmp->type = ICMP_ECHO;
-	//icmp->code = 0;
-  	//icmp->un.echo.sequence = rand();
-  	//icmp->un.echo.id = rand();
-  	//checksum
-	//icmp->checksum = 0;
-	
-	/* TCP Header Old
-	tcp->th_flags = TH_SYN;
-	tcp->th_sport = htons(rand());
-	tcp->th_dport = htons(rand());
-	tcp->th_ack = 1;
-	tcp->seq = rand();
-	tcp->doff = 5;
-	//tcp->c
-	tcp->th_win = htons(65535);
-	tcp->th_sum = 0xc886;	
-	*/
-	
 	// TCP header
 	struct tcphdr *tcp = (struct tcphdr *) (packet + sizeof (struct iphdr));
 	struct sockaddr_in sin;
@@ -172,15 +137,14 @@ int main(int argc, char **argv)
 	tcp->ack_seq = 0;
 	tcp->doff = 5;	//tcp header size
 	
-	
 	tcp->fin=0;
 	tcp->syn=1;
 	tcp->rst=0;
 	tcp->psh=0;
 	tcp->ack=0;
 	tcp->urg=0;
-	tcp->window = htons (5840);	/* maximum allowed window size */
-	tcp->check = 0;	//leave checksum 0 now, filled later by pseudo header
+	tcp->window = htons (5840);	// maximum allowed window size
+	tcp->check = 0;			// leave checksum 0 now, filled later by pseudo header
 	tcp->urg_ptr = 0;
 	
 	// Datagram to represent the packet
@@ -201,9 +165,7 @@ int main(int argc, char **argv)
 	
 	tcp->check = csum( (unsigned short*) pseudogram , psize);
 	
-	//IP_HDRINCL to tell the kernel that headers are included in the packet
-	
-
+	// IP_HDRINCL to tell the kernel that headers are included in the packet
 
 	struct sockaddr_in servaddr;
 	servaddr.sin_family = AF_INET;
@@ -212,67 +174,15 @@ int main(int argc, char **argv)
 
 	puts("flooding...");
 	
-	//memset(packet + sizeof(struct iphdr) + sizeof(struct tcphdr), 'm', payload_size);
+	// memset(packet + sizeof(struct iphdr) + sizeof(struct tcphdr), 'm', payload_size);
 	if ( (sent_size = sendto(sockfd, packet, packet_size, 0, (struct sockaddr*) &servaddr, sizeof (servaddr))) < 1) 
 	{
 		perror("send failed\n");
 		return (0);
 	}
 	
-	/*
-	while (1)
-	{
-		memset(packet + sizeof(struct iphdr) + sizeof(struct icmphdr), rand() % 255, payload_size);
-		
-		//recalculate the icmp header checksum since we are filling the payload with random characters everytime
-		icmp->checksum = 0;
-		icmp->checksum = in_cksum((unsigned short *)icmp, sizeof(struct icmphdr) + payload_size);
-		
-		if ( (sent_size = sendto(sockfd, packet, packet_size, 0, (struct sockaddr*) &servaddr, sizeof (servaddr))) < 1) 
-		{
-			perror("send failed\n");
-			break;
-		}
-		++sent;
-		printf("%d packets sent\r", sent);
-		fflush(stdout);
-		
-		usleep(10000);	//microseconds
-	}
-	*/
-	
 	free(packet);
 	close(sockfd);
 	
 	return (0);
 }
-
-/*
-	Function calculate checksum
-
-unsigned short in_cksum(unsigned short *ptr, int nbytes)
-{
-	register long sum;
-	u_short oddbyte;
-	register u_short answer;
-
-	sum = 0;
-	while (nbytes > 1) {
-		sum += *ptr++;
-		nbytes -= 2;
-	}
-
-	if (nbytes == 1) {
-		oddbyte = 0;
-		*((u_char *) & oddbyte) = *(u_char *) ptr;
-		sum += oddbyte;
-	}
-
-	sum = (sum >> 16) + (sum & 0xffff);
-	sum += (sum >> 16);
-	answer = ~sum;
-
-	return (answer);
-}
-
-*/
