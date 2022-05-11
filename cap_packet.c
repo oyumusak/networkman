@@ -91,12 +91,12 @@ struct tcp_hdr {
 
 struct in_addr addr;            // Used for both ip & subnet
 struct pcap_pkthdr cap_header;
-u_char packet[99];           // packet that pcap gives us
+u_char packet[99];           	// packet that pcap gives us
 const u_char *pkt_data;         // packet data
 char errbuf[PCAP_ERRBUF_SIZE];  // buffer to hold error string
 
 pcap_t *pcap_handle;            // Handle of the device that shall be sniffed
-pcap_if_t *device;    // List of all devices
+pcap_if_t *device;    		// List of all devices
 
 char *network_address;          // IP address of the network
 char *network_mask;             // IP mask of the network
@@ -104,8 +104,8 @@ char *network_mask;             // IP mask of the network
 char *device_name;              // name of the device to sniff on
 char *device_description;       // description of the device to sniff on
 
-bpf_u_int32 maskp;          // subnet mask
-bpf_u_int32 netp;           // ip address
+bpf_u_int32 maskp;          	// subnet mask
+bpf_u_int32 netp;           	// ip address
 
 struct bpf_program fp;          // holds compiled program
 
@@ -203,8 +203,6 @@ void my_callback(u_char *user_args, const struct pcap_pkthdr *cap_header, const 
     fprintf(stdout,"  Seconds: %d", cap_header->ts.tv_usec);
     fprintf(stdout,"  Time: %s", ctime((const time_t *)&cap_header->ts.tv_sec));
 
-	// decode_ethernet(packet);
-	// decode_ip(packet+ETHER_HDR_LEN);
     u_int16_t type = handle_ethernet(args,cap_header,packet);
 
     if(type == ETHERTYPE_IP)
@@ -219,7 +217,7 @@ void my_callback(u_char *user_args, const struct pcap_pkthdr *cap_header, const 
         {
             fprintf(stdout,"\t\t\t%u bytes of packet data\n\n", pkt_data_len);
             dump(pkt_data, pkt_data_len); // Dump the packet data
-            // fprintf(stdout,"==== end of packet ====\n");
+            fprintf(stdout,"==== end of packet ====\n");
         } 
         else { fprintf(stdout,"\t\t\tNo packet data\n\n"); }
     }
