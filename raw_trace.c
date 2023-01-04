@@ -177,6 +177,30 @@ int main(int argc, char *argv[])
 			fprintf(stdout, "ICMP Checksum\t: %d\n", ntohs(icmp.icmp_cksum));
 			dump((unsigned char *)&icmp, sizeof(icmp));	
 		} 
+
+
+		/* Receive it back. */
+		receive_s = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+		u_char buffer[1500];
+		socklen_t sinlen = sizeof(sin);
+		// memset(&buffer, 0x0, sizeof(buffer));
+		// int ret = recv(receive_s, &buffer, sizeof(buffer), 0);
+		int ret = recvfrom(receive_s, &buffer, sizeof(buffer), 0, (struct sockaddr *)&sin, &sinlen);
+
+		fprintf(stdout, "RECV %d BYTES\n", ret);
+		fprintf(stdout, "-------------\n");
+
+		// received packet
+		struct ip *ip_recv = (struct ip *)buffer;
+		struct icmp *icmp_recv = (struct icmp *)(buffer + (ip_recv->ip_hl << 2));
+		fprintf(stdout, "src  IP\t\t: %s\n", inet_ntoa(ip_recv->ip_src));
+		fprintf(stdout, "dst  IP\t\t: %s\n", inet_ntoa(ip_recv->ip_dst));
+		fprintf(stdout, "ICMP ID\t\t: %d\n", ntohs(icmp_recv->icmp_id));
+		fprintf(stdout, "ICMP Type\t: %d\n", icmp_recv->icmp_type);
+		fprintf(stdout, "ICMP Code\t: %d\n", icmp_recv->icmp_code);
+		fprintf(stdout, "Seq Number\t: %d\n", ntohl(icmp_recv->icmp_seq));
+		fprintf(stdout, "ICMP Checksum\t: %d\n", ntohs(icmp_recv->icmp_cksum));
+		dump((unsigned char *)&icmp_recv, ret);
 		
 	}
 	return 0;
