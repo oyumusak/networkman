@@ -67,7 +67,7 @@ unsigned short cksum(unsigned short *addr, int len)
 
 int main(int argc, char *argv[])
 {
-	
+
 	int transmit_s, receive_s, rc;
 	struct protoent *p;
 	struct sockaddr_in sin;
@@ -117,6 +117,14 @@ int main(int argc, char *argv[])
 	{
 		err(EX_OSERR, "sendto");
 	}
+
+sendto (sfd, buf, 28, 0, SA & addr, sizeof addr);
+sendto (sfd, buf, sizeof(struct ip) + sizeof(struct icmphdr), 0, SA & addr, sizeof addr);
+
+recvfrom (sfd, buff, 28, 0, SA & addr2, &len);
+recvfrom (sfd, buff, sizeof(buff), 0, SA & addr2, &len);
+
+
 
 	fprintf(stdout, "SENT %d BYTES\n", rc);
 	fprintf(stdout, "-------------\n");
