@@ -3,15 +3,10 @@
 #include <unistd.h>		 // lib for getpid()  and close()
 #include <string.h>		 // lib for memset() and memcpy()
 #include <arpa/inet.h> // lib for inet_addr() and inet_ntoa()
-
-#define __USE_BSD /* use bsd'ish ip header */
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-
-#define __FAVOR_BSD /* use bsd'ish tcp header */
-#include <netinet/tcp.h>
 #include <errno.h>
 #include <time.h>
 
@@ -109,15 +104,17 @@ int main(int argc, char *argv[])
 		errx(EX_USAGE, "Usage: %s <IP address>", argv[0]);
 
 	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = PF_INET;
-	sin.sin_port = 0;
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons (7);
 
+	// 192.168.1.117
+	
 	/* Parse command line address. */
-	if (inet_pton(PF_INET, argv[1], &sin.sin_addr) <= 0)
+	if (inet_pton(AF_INET, argv[1], &sin.sin_addr) <= 0)
 		err(EX_USAGE, "Parse address");
 
 	/* open raw socket */
-	transmit_s = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+	transmit_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (transmit_s < 0)
 		err(EX_OSERR, "transmit_s raw socket");
 
@@ -136,8 +133,11 @@ int main(int argc, char *argv[])
 		ip.ip_ttl = i;
 		ip.ip_p = IPPROTO_RAW;
 		ip.ip_sum = cksum((unsigned short *)&ip, sizeof(ip));
-		ip.ip_src.s_addr = inet_addr("10.28.28.28");
-		ip.ip_dst.s_addr = inet_addr(argv[1]);
+		// ip.ip_src.s_addr = inet_addr("10.28.28.28");
+		// ip.ip_dst.s_addr = inet_addr(argv[1]);
+		inet_pton(AF_INET, "192.168.1.117", &(ip.ip_src.s_addr));
+		inet_pton (AF_INET, argv[1], &(ip.ip_dst.s_addr));
+		
 
 		/* Fill in the ICMP header. */
 		memset(&icmp, 0x0, sizeof(icmp));
@@ -152,13 +152,11 @@ int main(int argc, char *argv[])
 			 insert its own header into the packet before our data;
 			 got this off the internet */
 
-		/*{  
-			int one = 1;
-			const int *val = &one;
-			// IPPROTO_RAW is 255 unknown protocol and dont get a response
-			if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
-				printf("Warning: Cannot set HDRINCL!\n");
-		} */
+		
+		int one = 1;
+		const int *val = &one;
+		if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
+			printf("Warning: Cannot set HDRINCL!\n");
 
 		/* Send it off. */
 		rc = sendto(transmit_s, &icmp, sizeof(icmp), 0, (struct sockaddr *)&sin, sizeof(sin));
@@ -166,6 +164,7 @@ int main(int argc, char *argv[])
 		else 
 		{
 			fprintf(stdout, "\n\nSENT %d BYTES\n", rc);
+			/*
 			fprintf(stdout, "-------------\n");
 			fprintf(stdout, "src  IP\t\t: %s\n", inet_ntoa(ip.ip_src));
 			fprintf(stdout, "dst  IP\t\t: %s\n", inet_ntoa(ip.ip_dst));
@@ -176,11 +175,12 @@ int main(int argc, char *argv[])
 			fprintf(stdout, "Seq Number\t: %d\n", ntohl(icmp.icmp_seq));
 			fprintf(stdout, "ICMP Checksum\t: %d\n", ntohs(icmp.icmp_cksum));
 			dump((unsigned char *)&icmp, sizeof(icmp));	
+			*/
 		} 
 
 
 		/* Receive it back. */
-		receive_s = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		u_char buffer[1500];
 		socklen_t sinlen = sizeof(sin);
 		// memset(&buffer, 0x0, sizeof(buffer));
