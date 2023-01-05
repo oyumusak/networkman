@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
-		sin.sin_port = htons(7);
+		sin.sin_port = 0;
 		
 		/* Parse command line address. */
 		if (inet_pton(AF_INET, argv[1], &sin.sin_addr) <= 0)
