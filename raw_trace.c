@@ -109,19 +109,23 @@ int main(int argc, char *argv[])
     ip->ip_len = sizeof(struct ip) + sizeof(struct icmp);
     ip->ip_id = 10000;
     ip->ip_off = 0;
-    ip->ip_ttl = 6; // hops to go through before packet dies
+
+    ip->ip_ttl = 16; // hops to go through before packet dies
+
     ip->ip_p = IPPROTO_RAW;
+
     // ip->ip_src.s_addr = inet_addr("192.168.1.117");
     // ip->ip_dst.s_addr = inet_addr(argv[1]);
     inet_pton(AF_INET, "192.168.1.117", &(ip->ip_src.s_addr));
     inet_pton(AF_INET, argv[1], &(ip->ip_dst.s_addr));
+    
     ip->ip_sum = csum((unsigned short *)buf, 9);
 
     icmp->icmp_type = ICMP_ECHO;
     icmp->icmp_code = 0;
     icmp->icmp_cksum = 0;
-    icmp->icmp_id = 0; // htons(getpid());
-    icmp->icmp_seq = htons(i);
+    icmp->icmp_id = 0;
+    icmp->icmp_seq = htons(0);
     icmp->icmp_cksum = csum((unsigned short *)(buf + 20), 4);
 
     /* Send it off. */
