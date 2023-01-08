@@ -141,7 +141,6 @@ int main(int argc, char *argv[])
 		{
 			fprintf(stdout, "\n\nSENT %d BYTES\n", rc);
 			fprintf(stdout, "-------------\n");
-			/*
 			fprintf(stdout, "src  IP\t\t: %s\n", inet_ntoa(ip->ip_src));
 			fprintf(stdout, "dst  IP\t\t: %s\n", inet_ntoa(ip->ip_dst));
 			fprintf(stdout, "IP ID\t\t: %d\n", ip->ip_id);
@@ -152,7 +151,6 @@ int main(int argc, char *argv[])
 			fprintf(stdout, "ICMP Checksum\t: %d\n", icmp->icmp_cksum);
 			fprintf(stdout, "TTL\t\t: %d\n", ip->ip_ttl);
 			dump((unsigned char *)&icmp, rc);
-			*/
 		} 
 
 		/* Receive it back. */
