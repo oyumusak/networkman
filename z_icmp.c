@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 		 at its beginning, and a tcp header structure after
 		 that to write the header values into it */
 
-	for (int i = 1; i < 31; i++)
+	for (int i = 1; i < 4; i++)
 	{
 		// int x = i + 1;
 		// delay((x * 2) + 1); // wait for (i*2)+1 hops, then send out next packet
@@ -86,28 +86,26 @@ int main(int argc, char *argv[])
 		struct protoent *p;
 		struct sockaddr_in sin;
 
-		if (argc != 2)
-			errx(EX_USAGE, "Usage: %s <IP address>", argv[0]);
+		if (argc != 3)
+			errx(EX_USAGE, "Usage: %s <sourceAddress> <destinationAddress>", argv[0]);
 
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
 		sin.sin_port = 0;
 		
 		/* Parse command line address. */
-		if (inet_pton(AF_INET, argv[1], &sin.sin_addr) <= 0)
+		if (inet_pton(AF_INET, argv[2], &sin.sin_addr) <= 0)
 			err(EX_USAGE, "Parse address");
 
 		/* open raw socket */
 		transmit_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		if (transmit_s < 0)
-			err(EX_OSERR, "error open transmit_s raw socket on %s to %s", argv[0], argv[1]);
+			err(EX_OSERR, "error open transmit_s raw socket on %s to %s", argv[0], argv[2]);
 		
-		// IP PROTO RAW or IP PROTO ICMP ?
 		int one = 1;
-		const int *val = &one;
+		const int *val = &one; // IP PROTO RAW or IP PROTO ICMP ?
 		if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
 			printf("Warning: Cannot set HDRINCL!\n");
-
 
 		/* Fill in the IP & ICMP header. */
 		u_char buf[4096] = { 0 };
@@ -123,9 +121,10 @@ int main(int argc, char *argv[])
 		ip->ip_ttl = htons(i);
 		ip->ip_p = IPPROTO_ICMP;
 		// ip->ip_src.s_addr = inet_addr("192.168.1.117");
-		// ip->ip_dst.s_addr = inet_addr(argv[1]);
-        inet_pton(AF_INET, "172.20.10.4", &(ip->ip_src.s_addr));
-		inet_pton (AF_INET, argv[1], &(ip->ip_dst.s_addr));
+		// ip->ip_dst.s_addr = inet_addr(argv[2]);
+    // inet_pton(AF_INET, "172.20.10.4", &(ip->ip_src.s_addr));
+		inet_pton(AF_INET, argv[1], &(ip->ip_src.s_addr));
+		inet_pton(AF_INET, argv[2], &(ip->ip_dst.s_addr));
 		ip->ip_sum = csum((unsigned short *)buf, 9);
 
 		icmp->icmp_type = ICMP_ECHO;
@@ -170,7 +169,7 @@ int main(int argc, char *argv[])
 		// received packet
 		struct ip *ip_recv = (struct ip *)buffer;
 		struct icmp *icmp_recv = (struct icmp *) (buffer + sizeof(struct ip));
-		/*
+
 		fprintf(stdout, "src  IP\t\t: %s\n", inet_ntoa(ip_recv->ip_src));
 		fprintf(stdout, "dst  IP\t\t: %s\n", inet_ntoa(ip_recv->ip_dst));
 		fprintf(stdout, "ICMP ID\t\t: %d\n", ntohs(icmp_recv->icmp_id));
@@ -179,13 +178,6 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Seq Number\t: %d\n", ntohl(icmp_recv->icmp_seq));
 		fprintf(stdout, "ICMP Checksum\t: %d\n", icmp_recv->icmp_cksum);
 		dump((unsigned char *)&icmp_recv, ret);
-		*/
-		fprintf(stdout, "\nhop limit:%d Address:%s\n", i, inet_ntoa(sin2.sin_addr));
-		fprintf(stdout, "\nhop limit:%d Address:%s\n", i, inet_ntoa(ip->ip_src));
-		fprintf(stdout, "\nhop limit:%d Address:%s\n", i, inet_ntoa(ip->ip_dst));
-		fprintf(stdout, "\nhop limit:%d Address:%s\n", i, inet_ntoa(ip_recv->ip_src));
-		fprintf(stdout, "\nhop limit:%d Address:%s\n", i, inet_ntoa(ip_recv->ip_dst));
-
 		
 	}
 	return 0;
