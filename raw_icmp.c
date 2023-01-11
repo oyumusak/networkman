@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+
 // dumps raw memory in hex byte and printable split format
 void dump(const unsigned char *data_buffer, const unsigned int length)
 {
@@ -37,6 +38,7 @@ void dump(const unsigned char *data_buffer, const unsigned int length)
 		} // end if
 	} // end for
 }
+
 
 // generic checksum calculation algorithm
 unsigned short cksum(unsigned short *addr, int len)
@@ -64,6 +66,7 @@ unsigned short cksum(unsigned short *addr, int len)
 
 	return (answer);
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -117,13 +120,6 @@ int main(int argc, char *argv[])
 	{
 		err(EX_OSERR, "sendto");
 	}
-
-sendto (sfd, buf, 28, 0, SA & addr, sizeof addr);
-sendto (sfd, buf, sizeof(struct ip) + sizeof(struct icmphdr), 0, SA & addr, sizeof addr);
-
-recvfrom (sfd, buff, 28, 0, SA & addr2, &len);
-recvfrom (sfd, buff, sizeof(buff), 0, SA & addr2, &len);
-
 
 
 	fprintf(stdout, "SENT %d BYTES\n", rc);
