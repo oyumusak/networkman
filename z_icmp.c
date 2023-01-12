@@ -17,6 +17,7 @@
 #include <errno.h>					// errno, perror(), and strerror() 
 
 /* this is a simple ICMP ping program */
+// sudo tcpdump -i any host 10.100.4.1 and 10.100.4.147
 
 // dumps raw memory in hex byte and printable split format
 void dump(const unsigned char *data_buffer, const unsigned int length)
@@ -115,7 +116,7 @@ int main(int argc, char *argv[])
 
 	int packet_count = atoi(argv[3]);
 
-	for (int i = 0; i < packet_count; i++)
+	for (int i = 1; i < packet_count; i++)
 	{
 
 		/* open raw socket */
@@ -128,6 +129,15 @@ int main(int argc, char *argv[])
 		// if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
 		// 	 printf("Warning: Cannot set HDRINCL!\n");
 
+
+		/* Fill in the ICMP header. */
+		memset(&icmp, 0x0, sizeof(icmp));
+		icmp.icmp_type = ICMP_ECHO;
+		icmp.icmp_code = 0;
+		icmp.icmp_id = getpid();
+		icmp.icmp_seq = 1;
+		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
+	
 		/* Fill in the IP header. */
 		memset(&ip, 0x0, sizeof(ip));
 		ip.ip_v = IPVERSION;
@@ -143,15 +153,7 @@ int main(int argc, char *argv[])
 		// inet_pton(AF_INET, argv[2], &(ip->ip_dst.s_addr));
 		ip.ip_src.s_addr = inet_addr(argv[1]);
 		ip.ip_dst.s_addr = inet_addr(argv[2]);
-
-		/* Fill in the ICMP header. */
-		memset(&icmp, 0x0, sizeof(icmp));
-		icmp.icmp_type = ICMP_ECHO;
-		icmp.icmp_code = 0;
-		icmp.icmp_id = getpid();
-		icmp.icmp_seq = 1;
-		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
-	
+		
 		/* Send it off. */
 		rc = sendto(transmit_s, &icmp, sizeof(icmp), 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0)
@@ -178,7 +180,7 @@ int main(int argc, char *argv[])
 			close(transmit_s);
 		} 
 
-
+		
 
 		/* Receive it back. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
