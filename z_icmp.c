@@ -18,9 +18,6 @@
 
 /* this is a simple ICMP ping program */
 
-// 10.100.4.217
-// 10.100.4.1
-
 // dumps raw memory in hex byte and printable split format
 void dump(const unsigned char *data_buffer, const unsigned int length)
 {
@@ -180,6 +177,8 @@ int main(int argc, char *argv[])
 			dump((unsigned char *)&icmp, rc);
 			close(transmit_s);
 		} 
+
+		s
 
 		/* Receive it back. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
