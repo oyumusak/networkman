@@ -18,6 +18,8 @@
 
 /* this is a simple ICMP ping program */
 // sudo tcpdump -i any host 10.100.4.1 and 10.100.4.147
+// sudo tcpdump -i any host 192.168.1.117 and host 8.8.8.8
+// 178.244.204.193
 
 // dumps raw memory in hex byte and printable split format
 void dump(const unsigned char *data_buffer, const unsigned int length)
@@ -123,11 +125,6 @@ int main(int argc, char *argv[])
 		transmit_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		if (transmit_s < 0)
 			err(EX_OSERR, "error open transmit_s raw socket on %s to %s", argv[0], argv[2]);
-		
-		// int one = 1;
-		// const int *val = &one; // IP PROTO RAW or IP PROTO ICMP ?
-		// if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
-		// 	 printf("Warning: Cannot set HDRINCL!\n");
 
 
 		/* Fill in the ICMP header. */
@@ -138,7 +135,7 @@ int main(int argc, char *argv[])
 		icmp.icmp_seq = 1;
 		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
 	
-		/* Fill in the IP header. */
+		/* Fill in the IP header. 
 		memset(&ip, 0x0, sizeof(ip));
 		ip.ip_v = IPVERSION;
 		ip.ip_hl = sizeof(ip) >> 2;
@@ -153,7 +150,8 @@ int main(int argc, char *argv[])
 		// inet_pton(AF_INET, argv[2], &(ip->ip_dst.s_addr));
 		ip.ip_src.s_addr = inet_addr(argv[1]);
 		ip.ip_dst.s_addr = inet_addr(argv[2]);
-		
+		*/
+	
 		/* Send it off. */
 		rc = sendto(transmit_s, &icmp, sizeof(icmp), 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0)
@@ -164,21 +162,20 @@ int main(int argc, char *argv[])
 		/* Send it off. */
 		rc = sendto(transmit_s, &icmp, sizeof(icmp), 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0) { err(EX_OSERR, "error sendto sendlen=%d error no = %d\n", rc, errno); }
-		else 
-		{
-			fprintf(stdout, "\nSENT %d BYTES\n", rc);
-			fprintf(stdout, "-------------\n");
-			fprintf(stdout, "src  IP\t\t: %s\n", inet_ntoa(ip.ip_src));
-			fprintf(stdout, "dst  IP\t\t: %s\n", inet_ntoa(ip.ip_dst));
-			fprintf(stdout, "IP ID\t\t: %d\n", ntohs(ip.ip_id));
-			fprintf(stdout, "ICMP ID\t\t: %d\n", ntohs(icmp.icmp_id));
-			fprintf(stdout, "ICMP Type\t: %d\n", icmp.icmp_type);
-			fprintf(stdout, "ICMP Code\t: %d\n", icmp.icmp_code);
-			fprintf(stdout, "Seq Number\t: %d\n", ntohl(icmp.icmp_seq));
-			fprintf(stdout, "ICMP Checksum\t: %d\n", ntohs(icmp.icmp_cksum));
-			dump((unsigned char *)&icmp, rc);
-			close(transmit_s);
-		} 
+
+		fprintf(stdout, "\nSENT %d BYTES\n", rc);
+		fprintf(stdout, "-------------\n");
+		fprintf(stdout, "src  IP\t\t: %s\n", inet_ntoa(ip.ip_src));
+		fprintf(stdout, "dst  IP\t\t: %s\n", inet_ntoa(ip.ip_dst));
+		fprintf(stdout, "IP ID\t\t: %d\n", ntohs(ip.ip_id));
+		fprintf(stdout, "ICMP ID\t\t: %d\n", ntohs(icmp.icmp_id));
+		fprintf(stdout, "ICMP Type\t: %d\n", icmp.icmp_type);
+		fprintf(stdout, "ICMP Code\t: %d\n", icmp.icmp_code);
+		fprintf(stdout, "Seq Number\t: %d\n", ntohl(icmp.icmp_seq));
+		fprintf(stdout, "ICMP Checksum\t: %d\n", ntohs(icmp.icmp_cksum));
+		dump((unsigned char *)&icmp, rc);
+		close(transmit_s);
+		
 
 		
 
