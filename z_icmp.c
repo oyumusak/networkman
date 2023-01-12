@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 			close(transmit_s);
 		} 
 
-		s
+
 
 		/* Receive it back. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
