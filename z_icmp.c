@@ -134,12 +134,7 @@ int main(int argc, char *argv[])
 		int one = 1;
 		const int *val = &one;
 		if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
-		{
-			perror("setsockopt() error");
-			exit(-1);
-		}
-		else
-			printf("setsockopt() is OK.");
+		{ perror("setsockopt() error"); exit(-1); }
 
 
 		/* Fill in the ICMP header. */
@@ -148,7 +143,11 @@ int main(int argc, char *argv[])
 		icmp.icmp_code = 0;
 		icmp.icmp_cksum = 0;
 		icmp.icmp_id = htons(getpid());
-		icmp.icmp_seq = htons(i);
+
+		// TODO: -T flag for traceroute mode (set sequence number 0)
+
+		icmp.icmp_seq = htons(0);    // sequence number for traceroute packet is 0
+		// icmp.icmp_seq = htons(i); // sequence number for dummy ping packet is i
 		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
 
 		/* IP header */
@@ -170,9 +169,8 @@ int main(int argc, char *argv[])
 		memcpy(packet, &ip, sizeof(ip));
 		memcpy(packet + sizeof(ip), &icmp, sizeof(icmp));
 
-		/* Send it off. */
+		/* Send the request. */
 		rc = sendto(transmit_s, packet, ip.ip_len, 0, (struct sockaddr *)&sin, sizeof(sin));
-		// rc = sendto(transmit_s, &icmp, sizeof(icmp), 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0) { err(EX_OSERR, "error sendto sendlen=%d error no = %d\n", rc, errno); }
 
 		fprintf(stdout, "\n  SENT %d BYTES\n", rc);
@@ -183,13 +181,14 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Type\t: %d\n", icmp.icmp_type);
 		fprintf(stdout, "Code\t: %d\n", icmp.icmp_code);
 		fprintf(stdout, "Seq\t: %d\n", htons(icmp.icmp_seq));
+		fprintf(stdout, "TTL\t: %d\n", ip.ip_ttl);
 		dump((unsigned char *)&icmp, rc);
 		close(transmit_s);
 		
 
 		
 
-		/* Receive it back. */
+		/* Receive the response. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		u_char buffer[1500];
 		socklen_t sinlen = sizeof(sin);
@@ -207,6 +206,7 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Type\t: %d\n", icmp_recv->icmp_type);
 		fprintf(stdout, "Code\t: %d\n", icmp_recv->icmp_code);
 		fprintf(stdout, "Seq\t: %d\n", htons(icmp_recv->icmp_seq));
+		fprintf(stdout, "TTL\t: %d\n", ip_recv->ip_ttl);
 		dump((unsigned char *)&icmp_recv, ret);
 		
 		close(receive_s);
