@@ -17,7 +17,6 @@
 #include <errno.h>					// errno, perror(), and strerror() 
 
 /* this is a simple ICMP ping program */
-// sudo tcpdump -i any host 10.100.4.1 and 10.100.4.147
 // sudo tcpdump -i any host 192.168.1.117 and host 8.8.8.8
 
 // TODO: send sample data to the destination host !! and test dump() function
