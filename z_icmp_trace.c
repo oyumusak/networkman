@@ -151,14 +151,7 @@ int main(int argc, char *argv[])
 		icmp.icmp_code = 0;
 		icmp.icmp_cksum = 0;
 		icmp.icmp_id = htons(getpid());
-
-
-
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!±±± //
-		/* TODO: -T flag for traceroute mode (set sequence number 0) */
 		icmp.icmp_seq = htons(0);    // sequence number for traceroute packet is 0
-		// icmp.icmp_seq = htons(i); // sequence number for dummy ping packet is i
-
 		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
 
 		/* IP header */
@@ -168,13 +161,7 @@ int main(int argc, char *argv[])
 		ip.ip_len = sizeof(struct ip) + sizeof(struct icmp);
 		ip.ip_id = htons(getpid());
 		ip.ip_off = 0;
-
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! //
-		/* TODO: -T flag for traceroute mode */
 		ip.ip_ttl = i + 1;
-		// ip.ip_ttl = MAXTTL;
-
-
 		ip.ip_p = IPPROTO_ICMP;
 		ip.ip_sum = 0;
 		ip.ip_src.s_addr = inet_addr(argv[1]);
@@ -201,9 +188,6 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "TTL\t: %d\n", ip.ip_ttl);
 		dump((unsigned char *)&icmp, rc);
 		close(transmit_s);
-		
-
-		
 
 		/* Receive the response. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -236,6 +220,7 @@ int main(int argc, char *argv[])
 			fprintf(stdout, "Code\t: %d\n", icmp_recv->icmp_code);
 			fprintf(stdout, "Seq\t: %d\n", htons(icmp_recv->icmp_seq));
 			fprintf(stdout, "TTL\t: %d\n", ip_recv->ip_ttl);
+			fprintf(stdout, "Hops\t: %d\n", MAXTTL - ip_recv->ip_ttl);
 			dump((unsigned char *)&icmp_recv, ret);
 			
 			close(receive_s);
