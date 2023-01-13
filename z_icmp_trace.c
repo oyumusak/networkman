@@ -120,23 +120,20 @@ int main(int argc, char *argv[])
 	if (inet_pton(AF_INET, argv[2], &sin.sin_addr) <= 0)
 		err(EX_USAGE, "Parse address");
 
+	fprintf(stdout, "traceroute to %s, %d hops max, %d byte packets \n", argv[2], MAXTTL, 28);
 
 	for (int i = 0; i < packet_count; i++)
 	{
-
-		/* open raw socket */
+		clock_t start_time = clock();
 		transmit_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		if (transmit_s < 0)
 			err(EX_OSERR, "error open transmit_s raw socket on %s to %s", argv[0], argv[2]);
 
-		/* set socket option to tell the kernel that
-			we provide the IP structure */
 		int one = 1;
 		const int *val = &one;
 		if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
 		{ perror("setsockopt() IP_HDRINCL error"); exit(-1); }
 
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! //
 		/* set deadline */
 		struct timeval tv;
 		tv.tv_sec = 1;  /* 1 Sec Timeout */
@@ -145,7 +142,7 @@ int main(int argc, char *argv[])
 		{ perror("setsockopt() SO_RCVTIMEO error"); exit(-1); }
 
 
-		/* Fill in the ICMP header. */
+		/* ICMP header. */
 		memset(&icmp, 0x0, sizeof(icmp));
 		icmp.icmp_type = ICMP_ECHO;
 		icmp.icmp_code = 0;
@@ -173,10 +170,11 @@ int main(int argc, char *argv[])
 		memcpy(packet, &ip, sizeof(ip));
 		memcpy(packet + sizeof(ip), &icmp, sizeof(icmp));
 
-		/* Send the request. */
+		/* send the request. */
 		rc = sendto(transmit_s, packet, ip.ip_len, 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0) { err(EX_OSERR, "error sendto sendlen=%d error no = %d\n", rc, errno); }
 
+		/*
 		fprintf(stdout, "\n  SENT %d BYTES\n", rc);
 		fprintf(stdout, "-----------------\n");
 		fprintf(stdout, "ID\t: %d\n", ntohs(icmp.icmp_id));
@@ -187,12 +185,18 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Seq\t: %d\n", htons(icmp.icmp_seq));
 		fprintf(stdout, "TTL\t: %d\n", ip.ip_ttl);
 		dump((unsigned char *)&icmp, rc);
+		*/
+
 		close(transmit_s);
 
-		/* Receive the response. */
+		/* receive the response. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		if (receive_s < 0)
 			err(EX_OSERR, "error open receive_s raw socket on %s to %s", argv[0], argv[2]);
+
+		u_char buffer[4096];
+		struct ip *ip_recv = (struct ip *)buffer;
+		struct icmp *icmp_recv = (struct icmp *)(buffer + (ip_recv->ip_hl << 2));
 
 		/* set deadline */
 		struct timeval tv_recv;
@@ -201,18 +205,22 @@ int main(int argc, char *argv[])
 		if (setsockopt(receive_s, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv_recv, sizeof(struct timeval)))
 		{ printf("setsockopt() SO_RCVTIMEO error"); }
 
-		u_char buffer[4096];
 		socklen_t sinlen = sizeof(sin);
 		ret = recvfrom(receive_s, &buffer, sizeof(buffer), 0, (struct sockaddr *)&sin, &sinlen);
 		// if (ret < 0) { err(EX_OSERR, "error recvfrom recvlen=%d error no = %d\n", ret, errno); }
 		if (ret != -1) 
 		{ 
+			clock_t end_time = clock();
+			float time_taken = (float)(end_time - start_time);
+			time_taken = (float)(time_taken * 10) / 1000;
+
+			// if packet_count is 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 then print the packet count
+			if (i < 9) { fprintf(stdout, " %d %s      \t%f ms\n", i + 1, inet_ntoa(ip_recv->ip_src), time_taken); }
+			else { fprintf(stdout, "%d %s      \t%f ms\n", i + 1, inet_ntoa(ip_recv->ip_src), time_taken); }
+
+			/*
 			fprintf(stdout, "\n  RECV %d BYTES\n", rc);
 			fprintf(stdout, "-----------------\n");
-
-			// received packet
-			struct ip *ip_recv = (struct ip *)buffer;
-			struct icmp *icmp_recv = (struct icmp *)(buffer + (ip_recv->ip_hl << 2));
 			fprintf(stdout, "ID\t: %d\n", ntohs(icmp_recv->icmp_id));
 			fprintf(stdout, "Src\t: %s\n", inet_ntoa(ip_recv->ip_src));
 			fprintf(stdout, "Dst\t: %s\n", inet_ntoa(ip_recv->ip_dst));
@@ -222,10 +230,14 @@ int main(int argc, char *argv[])
 			fprintf(stdout, "TTL\t: %d\n", ip_recv->ip_ttl);
 			fprintf(stdout, "Hops\t: %d\n", MAXTTL - ip_recv->ip_ttl);
 			dump((unsigned char *)&icmp_recv, ret);
-			
+			*/
+
 			close(receive_s);
 		}
 		else { close(receive_s); }
+		// if ip src = ip_recv dest, then break
+		if (ip_recv->ip_src.s_addr == ip.ip_dst.s_addr) { break; }
+
 
 	}
 
