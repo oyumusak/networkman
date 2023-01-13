@@ -145,7 +145,6 @@ int main(int argc, char *argv[])
 		icmp.icmp_id = htons(getpid());
 
 		// TODO: -T flag for traceroute mode (set sequence number 0)
-
 		icmp.icmp_seq = htons(0);    // sequence number for traceroute packet is 0
 		// icmp.icmp_seq = htons(i); // sequence number for dummy ping packet is i
 		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
@@ -157,7 +156,10 @@ int main(int argc, char *argv[])
 		ip.ip_len = sizeof(struct ip) + sizeof(struct icmp);
 		ip.ip_id = htons(getpid());
 		ip.ip_off = 0;
-		ip.ip_ttl = 255;
+
+		// TODO: -T flag for traceroute mode (set ttl to i+1)
+		ip.ip_ttl = i + 1; // ttl for traceroute packet
+		// ip.ip_ttl = MAXTTL; // max ttl 255 for dummy ping packet
 		ip.ip_p = IPPROTO_ICMP;
 		ip.ip_sum = 0;
 		ip.ip_src.s_addr = inet_addr(argv[1]);
