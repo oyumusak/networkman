@@ -19,7 +19,6 @@
 /* this is a simple ICMP ping program */
 // sudo tcpdump -i any host 10.100.4.1 and 10.100.4.147
 // sudo tcpdump -i any host 192.168.1.117 and host 8.8.8.8
-// 178.244.204.193
 
 // dumps raw memory in hex byte and printable split format
 void dump(const unsigned char *data_buffer, const unsigned int length)
@@ -76,11 +75,8 @@ unsigned short cksum(unsigned short *addr, int len)
 
 void delay(int number_of_seconds)
 {
-	// Approximating to meet enough delay, so that my icmp listener has enough time to go to I/O burst and get back to listening
 	int approx_time = 10000 * number_of_seconds;
-	// Stroing start time
 	clock_t start_time = clock();
-	// looping till required time is not acheived
 	while (clock() < start_time + approx_time)
 		printf(""); //"%d\n",clock());
 	;
@@ -89,10 +85,6 @@ void delay(int number_of_seconds)
 
 int main(int argc, char *argv[])
 {
-	/* this buffer will contain ip header, tcp header,
-		 and payload. we'll point an ip header structure
-		 at its beginning, and a tcp header structure after
-		 that to write the header values into it */
 	int packet_count = atoi(argv[3]);
 	int transmit_s, receive_s, rc, ret;
 	struct protoent *p;
@@ -112,6 +104,7 @@ int main(int argc, char *argv[])
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
 	sin.sin_port = 0;
+
 	/* Parse source address. */
 	if (inet_pton(AF_INET, argv[1], &sin.sin_addr) <= 0)
 		err(EX_USAGE, "Parse address");
@@ -173,20 +166,6 @@ int main(int argc, char *argv[])
 		/* send the request. */
 		rc = sendto(transmit_s, packet, ip.ip_len, 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0) { err(EX_OSERR, "error sendto sendlen=%d error no = %d\n", rc, errno); }
-
-		/*
-		fprintf(stdout, "\n  SENT %d BYTES\n", rc);
-		fprintf(stdout, "-----------------\n");
-		fprintf(stdout, "ID\t: %d\n", ntohs(icmp.icmp_id));
-		fprintf(stdout, "Src\t: %s\n", inet_ntoa(ip.ip_src));
-		fprintf(stdout, "Dest\t: %s\n", inet_ntoa(ip.ip_dst));
-		fprintf(stdout, "Type\t: %d\n", icmp.icmp_type);
-		fprintf(stdout, "Code\t: %d\n", icmp.icmp_code);
-		fprintf(stdout, "Seq\t: %d\n", htons(icmp.icmp_seq));
-		fprintf(stdout, "TTL\t: %d\n", ip.ip_ttl);
-		dump((unsigned char *)&icmp, rc);
-		*/
-
 		close(transmit_s);
 
 		/* receive the response. */
@@ -207,7 +186,6 @@ int main(int argc, char *argv[])
 
 		socklen_t sinlen = sizeof(sin);
 		ret = recvfrom(receive_s, &buffer, sizeof(buffer), 0, (struct sockaddr *)&sin, &sinlen);
-		// if (ret < 0) { err(EX_OSERR, "error recvfrom recvlen=%d error no = %d\n", ret, errno); }
 		if (ret != -1) 
 		{ 
 			clock_t end_time = clock();
@@ -217,28 +195,17 @@ int main(int argc, char *argv[])
 			// if packet_count is 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 then print the packet count
 			if (i < 9) { fprintf(stdout, " %d %s      \t%f ms\n", i + 1, inet_ntoa(ip_recv->ip_src), time_taken); }
 			else { fprintf(stdout, "%d %s      \t%f ms\n", i + 1, inet_ntoa(ip_recv->ip_src), time_taken); }
-
-			/*
-			fprintf(stdout, "\n  RECV %d BYTES\n", rc);
-			fprintf(stdout, "-----------------\n");
-			fprintf(stdout, "ID\t: %d\n", ntohs(icmp_recv->icmp_id));
-			fprintf(stdout, "Src\t: %s\n", inet_ntoa(ip_recv->ip_src));
-			fprintf(stdout, "Dst\t: %s\n", inet_ntoa(ip_recv->ip_dst));
-			fprintf(stdout, "Type\t: %d\n", icmp_recv->icmp_type);
-			fprintf(stdout, "Code\t: %d\n", icmp_recv->icmp_code);
-			fprintf(stdout, "Seq\t: %d\n", htons(icmp_recv->icmp_seq));
-			fprintf(stdout, "TTL\t: %d\n", ip_recv->ip_ttl);
-			fprintf(stdout, "Hops\t: %d\n", MAXTTL - ip_recv->ip_ttl);
-			dump((unsigned char *)&icmp_recv, ret);
-			*/
-
 			close(receive_s);
 		}
-		else { close(receive_s); }
-		// if ip src = ip_recv dest, then break
+		else 
+		{ 
+			// if packet_count is 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 then print the packet count
+			if (i < 9) { fprintf(stdout, " %d * * *\n", i + 1); }
+			else { fprintf(stdout, "%d * * *\n", i + 1); }
+			close(receive_s); 
+		}
+
 		if (ip_recv->ip_src.s_addr == ip.ip_dst.s_addr) { break; }
-
-
 	}
 
 	return 0;
