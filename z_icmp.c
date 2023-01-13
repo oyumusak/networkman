@@ -19,7 +19,8 @@
 /* this is a simple ICMP ping program */
 // sudo tcpdump -i any host 10.100.4.1 and 10.100.4.147
 // sudo tcpdump -i any host 192.168.1.117 and host 8.8.8.8
-// 178.244.204.193
+
+// TODO: send sample data to the destination host !! and test dump() function
 
 // dumps raw memory in hex byte and printable split format
 void dump(const unsigned char *data_buffer, const unsigned int length)
@@ -134,8 +135,14 @@ int main(int argc, char *argv[])
 		int one = 1;
 		const int *val = &one;
 		if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
-		{ perror("setsockopt() error"); exit(-1); }
+		{ perror("setsockopt() IP_HDRINCL error"); exit(-1); }
 
+		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! //
+		/* set timeout for traceroute packet is 1 second */
+		struct timeval tv;
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+		setsockopt(transmit_s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
 
 		/* Fill in the ICMP header. */
 		memset(&icmp, 0x0, sizeof(icmp));
@@ -143,23 +150,17 @@ int main(int argc, char *argv[])
 		icmp.icmp_code = 0;
 		icmp.icmp_cksum = 0;
 		icmp.icmp_id = htons(getpid());
-
-		// TODO: -T flag for traceroute mode (set sequence number 0)
-		icmp.icmp_seq = htons(0);    // sequence number for traceroute packet is 0
-		// icmp.icmp_seq = htons(i); // sequence number for dummy ping packet is i
+		icmp.icmp_seq = htons(i); // sequence number for dummy ping packet is i
 		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
 
 		/* IP header */
 		ip.ip_hl = 5;
 		ip.ip_v = 4;
-		ip.ip_tos = 0;
+		ip.ip_tos = IPTOS_MINCOST;
 		ip.ip_len = sizeof(struct ip) + sizeof(struct icmp);
 		ip.ip_id = htons(getpid());
 		ip.ip_off = 0;
-
-		// TODO: -T flag for traceroute mode (set ttl to i+1)
-		ip.ip_ttl = i + 1; // ttl for traceroute packet
-		// ip.ip_ttl = MAXTTL; // max ttl 255 for dummy ping packet
+		ip.ip_ttl = MAXTTL;
 		ip.ip_p = IPPROTO_ICMP;
 		ip.ip_sum = 0;
 		ip.ip_src.s_addr = inet_addr(argv[1]);
@@ -167,7 +168,7 @@ int main(int argc, char *argv[])
 		ip.ip_sum = cksum((unsigned short *)&ip, sizeof(ip));
 
 		/* packet */
-		char packet[4096];
+		u_char packet[4096];
 		memcpy(packet, &ip, sizeof(ip));
 		memcpy(packet + sizeof(ip), &icmp, sizeof(icmp));
 
@@ -175,7 +176,7 @@ int main(int argc, char *argv[])
 		rc = sendto(transmit_s, packet, ip.ip_len, 0, (struct sockaddr *)&sin, sizeof(sin));
 		if (rc < 0) { err(EX_OSERR, "error sendto sendlen=%d error no = %d\n", rc, errno); }
 
-		fprintf(stdout, "\n  SENT %d BYTES\n", rc);
+		fprintf(stdout, "\n  SENT %d BYTES\n", ip.ip_len);
 		fprintf(stdout, "-----------------\n");
 		fprintf(stdout, "ID\t: %d\n", ntohs(icmp.icmp_id));
 		fprintf(stdout, "Src\t: %s\n", inet_ntoa(ip.ip_src));
@@ -184,24 +185,24 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Code\t: %d\n", icmp.icmp_code);
 		fprintf(stdout, "Seq\t: %d\n", htons(icmp.icmp_seq));
 		fprintf(stdout, "TTL\t: %d\n", ip.ip_ttl);
-		dump((unsigned char *)&icmp, rc);
+		dump((unsigned char *)&packet, rc);
 		close(transmit_s);
 		
-
-		
-
 		/* Receive the response. */
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-		u_char buffer[1500];
+		u_char buffer[4096];
 		socklen_t sinlen = sizeof(sin);
-		ret = recvfrom(receive_s, &buffer, sizeof(buffer), 0, (struct sockaddr *)&sin, &sinlen);
+		// received packet
+		struct ip *ip_recv = (struct ip *)buffer;
+		struct icmp *icmp_recv = (struct icmp *)(buffer + (ip_recv->ip_hl << 2));
+		memcpy(buffer, &ip_recv, sizeof(ip_recv));
+		memcpy(buffer + sizeof(ip_recv), &icmp_recv, sizeof(icmp_recv));
+
+		ret = recvfrom(receive_s, buffer, sizeof(buffer), 0, (struct sockaddr *)&sin, &sinlen);
 
 		fprintf(stdout, "\n  RECV %d BYTES\n", rc);
 		fprintf(stdout, "-----------------\n");
 
-		// received packet
-		struct ip *ip_recv = (struct ip *)buffer;
-		struct icmp *icmp_recv = (struct icmp *)(buffer + (ip_recv->ip_hl << 2));
 		fprintf(stdout, "ID\t: %d\n", ntohs(icmp_recv->icmp_id));
 		fprintf(stdout, "Src\t: %s\n", inet_ntoa(ip_recv->ip_src));
 		fprintf(stdout, "Dst\t: %s\n", inet_ntoa(ip_recv->ip_dst));
@@ -209,7 +210,9 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "Code\t: %d\n", icmp_recv->icmp_code);
 		fprintf(stdout, "Seq\t: %d\n", htons(icmp_recv->icmp_seq));
 		fprintf(stdout, "TTL\t: %d\n", ip_recv->ip_ttl);
-		dump((unsigned char *)&icmp_recv, ret);
+		fprintf(stdout, "Hops\t: %d\n", MAXTTL - ip_recv->ip_ttl);
+		dump((unsigned char *)&buffer, ret);
+		
 		
 		close(receive_s);
 		
