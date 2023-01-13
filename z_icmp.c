@@ -75,25 +75,8 @@ unsigned short cksum(unsigned short *addr, int len)
 }
 
 
-void delay(int number_of_seconds)
-{
-	// Approximating to meet enough delay, so that my icmp listener has enough time to go to I/O burst and get back to listening
-	int approx_time = 10000 * number_of_seconds;
-	// Stroing start time
-	clock_t start_time = clock();
-	// looping till required time is not acheived
-	while (clock() < start_time + approx_time)
-		printf(""); //"%d\n",clock());
-	;
-}
-
-
 int main(int argc, char *argv[])
 {
-	/* this buffer will contain ip header, tcp header,
-		 and payload. we'll point an ip header structure
-		 at its beginning, and a tcp header structure after
-		 that to write the header values into it */
 	int packet_count = atoi(argv[3]);
 	int transmit_s, receive_s, rc, ret;
 	struct protoent *p;
@@ -113,6 +96,7 @@ int main(int argc, char *argv[])
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
 	sin.sin_port = 0;
+
 	/* Parse source address. */
 	if (inet_pton(AF_INET, argv[1], &sin.sin_addr) <= 0)
 		err(EX_USAGE, "Parse address");
@@ -121,24 +105,17 @@ int main(int argc, char *argv[])
 	if (inet_pton(AF_INET, argv[2], &sin.sin_addr) <= 0)
 		err(EX_USAGE, "Parse address");
 
-
 	for (int i = 0; i < packet_count; i++)
 	{
-
-		/* open raw socket */
 		transmit_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		if (transmit_s < 0)
 			err(EX_OSERR, "error open transmit_s raw socket on %s to %s", argv[0], argv[2]);
 
-		/* set socket option to tell the kernel that
-			we provide the IP structure */
 		int one = 1;
 		const int *val = &one;
 		if (setsockopt(transmit_s, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
 		{ perror("setsockopt() IP_HDRINCL error"); exit(-1); }
 
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! //
-		/* set timeout for traceroute packet is 1 second */
 		struct timeval tv;
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
@@ -192,7 +169,7 @@ int main(int argc, char *argv[])
 		receive_s = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 		u_char buffer[4096];
 		socklen_t sinlen = sizeof(sin);
-		// received packet
+
 		struct ip *ip_recv = (struct ip *)buffer;
 		struct icmp *icmp_recv = (struct icmp *)(buffer + (ip_recv->ip_hl << 2));
 		memcpy(buffer, &ip_recv, sizeof(ip_recv));
@@ -202,7 +179,6 @@ int main(int argc, char *argv[])
 
 		fprintf(stdout, "\n  RECV %d BYTES\n", rc);
 		fprintf(stdout, "-----------------\n");
-
 		fprintf(stdout, "ID\t: %d\n", ntohs(icmp_recv->icmp_id));
 		fprintf(stdout, "Src\t: %s\n", inet_ntoa(ip_recv->ip_src));
 		fprintf(stdout, "Dst\t: %s\n", inet_ntoa(ip_recv->ip_dst));
@@ -212,11 +188,8 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "TTL\t: %d\n", ip_recv->ip_ttl);
 		fprintf(stdout, "Hops\t: %d\n", MAXTTL - ip_recv->ip_ttl);
 		dump((unsigned char *)&buffer, ret);
-		
-		
 		close(receive_s);
 		
 	}
-
 	return 0;
 }
