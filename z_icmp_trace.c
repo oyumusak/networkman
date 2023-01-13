@@ -72,17 +72,6 @@ unsigned short cksum(unsigned short *addr, int len)
 	return (answer);
 }
 
-
-void delay(int number_of_seconds)
-{
-	int approx_time = 10000 * number_of_seconds;
-	clock_t start_time = clock();
-	while (clock() < start_time + approx_time)
-		printf(""); //"%d\n",clock());
-	;
-}
-
-
 int main(int argc, char *argv[])
 {
 	int packet_count = atoi(argv[3]);
@@ -207,6 +196,5 @@ int main(int argc, char *argv[])
 
 		if (ip_recv->ip_src.s_addr == ip.ip_dst.s_addr) { break; }
 	}
-
 	return 0;
 }
