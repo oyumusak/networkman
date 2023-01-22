@@ -16,6 +16,20 @@
 #include <sysexits.h>				// EX_USAGE and EX_OSERR
 #include <errno.h>					// errno, perror(), and strerror() 
 
+// WHAT IS CHECKSUM? https://www.youtube.com/watch?v=1QXQXQ1ZgX8
+
+// ICMP header checksum: https://www.binarytides.com/ping-in-c-with-linux-sockets/
+
+// RFC 791: https://tools.ietf.org/html/rfc791
+// RFC 792: https://tools.ietf.org/html/rfc792
+// RFC 1071: https://tools.ietf.org/html/rfc1071
+// RFC 1812: https://tools.ietf.org/html/rfc1812
+// RFC 1813: https://tools.ietf.org/html/rfc1813
+// RFC 1815: https://tools.ietf.org/html/rfc1815
+// RFC 1819: https://tools.ietf.org/html/rfc1819
+// RFC 2460: https://tools.ietf.org/html/rfc2460
+
+
 /* this is a simple ICMP ping program */
 // sudo tcpdump -i any host 192.168.1.117 and host 8.8.8.8
 
@@ -128,6 +142,8 @@ int main(int argc, char *argv[])
 		icmp.icmp_id = htons(getpid());
 		icmp.icmp_seq = htons(i); // sequence number for dummy ping packet is i
 		icmp.icmp_cksum = cksum((unsigned short *)&icmp, sizeof(icmp));
+
+		
 
 		/* IP header */
 		ip.ip_hl = 5;
